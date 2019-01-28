@@ -10,12 +10,18 @@ var client = new Twitter({
 
 var trumpParams = {
     screen_name: 'realDonaldTrump',
-    // exclude_replies: true,
+    // exclude retweets
     include_rts: false,
     count: 5,
-
     // without this, it'll truncate tweets > 140 characters
     // if this isn't active, 'full_text' needs to be 'text'
+    tweet_mode: 'extended'
+};
+
+var spongeParams = {
+    screen_name: 'realSpongeTrump',
+    include_rts: false,
+    count: 5,
     tweet_mode: 'extended'
 };
 
@@ -23,76 +29,53 @@ var latestTrumpTweetCleaned = '';
 var latestTrumpTweetInMockingFormat = '';
 var latestTrumpTweetSourceLink = '';
 
-var spongeParams = {
-    screen_name: 'realSpongeTrump',
-    // exclude_replies: true,
-    include_rts: false,
-    count: 1,
-
-    // without this, it'll truncate tweets > 140 characters
-    // if this isn't active, 'full_text' needs to be 'text'
-    tweet_mode: 'extended'
-};
-
-var latestSpongeTweetCleaned = '';
-
-function alreadyMockedLastTweet(lastTrumpTweetIdToCheck) {
-    client.get('statuses/user_timeline', spongeParams, function (error, tweets, response) {
-        latestSpongeTweetCleaned = tweets[0].full_text
-            .replace(/(?:https?|ftp):\/\/[\n\S]+/g, '')
-            .replace(/&amp;/gi, '&');
-
-        console.log(tweets[0].quoted_status.id_str + ' <-- last tweet quoted by @realSpongeTrump // last tweet by @realDonaldTrump --> ' + lastTrumpTweetIdToCheck);
-        console.log(tweets[0].quoted_status.id_str === lastTrumpTweetIdToCheck);
-
-        // if the latest tweet by @realSpongeTrump is a quote tweet of @realDonaldTrump's latest tweet, return true
-        return tweets[0].quoted_status.id_str === lastTrumpTweetIdToCheck;
-    });
-}
-
-client.get('statuses/user_timeline', trumpParams, function (error, tweets, response) {
+// request @realDonaldTrump's latest tweets
+client.get('statuses/user_timeline', trumpParams, function (error, trumpTweets, response) {
     if (!error) {
-        //loop through latest [trumpParams.count] tweets
-        for (var i = 0; i < tweets.length; i++) {
-
-            // check that we haven't already mocked the latest Tweet
-            if (!alreadyMockedLastTweet(tweets[i].id_str)) {
-
-                latestTrumpTweetCleaned = tweets[i].full_text
-                    // get rid of links in tweet text
-                    .replace(/(?:https?|ftp):\/\/[\n\S]+/g, '')
-                    // get rid of escaped ampersands
-                    .replace(/&amp;/gi, '&');
-
-                // use spongemock library to convert the text into Spongebob mocking format
-                latestTrumpTweetInMockingFormat = spongemock.spongeMock(latestTrumpTweetCleaned);
-
-                // create a link to append to the new tweet so that it's a quote-tweet
-                // (when you click Retweet on the Twitter official clients and then add a comment, this is what Twitter is doing on the backend: creating a new tweet with a link to the 'retweeted' one)
-                latestTrumpTweetSourceLink = 'https://twitter.com/' + tweets[i].user.screen_name + '/status/' + tweets[i].id_str;
-
-                // parameters to include when sending the new tweet
-                var sendTweetParams = {
-                    // attaching this as a URL separate from the text means it won't count against the character limit
-                    attachment_url: latestTrumpTweetSourceLink,
-                    // this is the tweet converted into mocking format
-                    status: latestTrumpTweetInMockingFormat
+        // request @realSpongeTrump's latest tweets
+        client.get('statuses/user_timeline', spongeParams, function (error, spongeTweets, response) {
+            if (!error) {
+                //loop through latest [trumpParams.count] tweets from @realDonaldTrump
+                for (i = 0; i < trumpTweets.length; i++) {
+                    // flag to say if @realSpongeTrump has already mocked the latest Tweet
+                    var alreadyMocked = false;
+                    // the ID number of the @realDonaldTrump tweet to check
+                    lastTrumpTweetIdToCheck = trumpTweets[i].id_str;
+                    // loop through the latest few @realSpongeTrump tweets to check them against the latest few @realDonaldTrump tweets
+                    for (j = 0; j < spongeTweets.length; j++) {
+                        // if the latest tweet by @realSpongeTrump is a quote tweet of @realDonaldTrump's latest tweet, set flag to true
+                        if (spongeTweets[j].quoted_status.id_str === lastTrumpTweetIdToCheck) {
+                            // set this tweet to be skipped
+                            alreadyMocked = true;
+                        }
+                    }
+                    // skip anything that has already been mocked
+                    if (!alreadyMocked) {
+                        // remove URLs from tweet and make ampersands show up properly
+                        latestTrumpTweetCleaned = trumpTweets[i].full_text
+                            // get rid of links in tweet text
+                            .replace(/(?:https?|ftp):\/\/[\n\S]+/g, '')
+                            // get rid of escaped ampersands
+                            .replace(/&amp;/gi, '&');
+                        // use spongemock library to convert the text into Spongebob mocking format
+                        latestTrumpTweetInMockingFormat = spongemock.spongeMock(latestTrumpTweetCleaned);
+                        // create a link to append to the new tweet so that it's a quote-tweet
+                        // ("retweet with comment" actually means: create a new tweet and append a link to the "retweeted" one)
+                        latestTrumpTweetSourceLink = 'https://twitter.com/' + trumpTweets[i].user.screen_name + '/status/' + trumpTweets[i].id_str;
+                        // parameters to include when sending the new tweet
+                        var sendTweetParams = {
+                            // attaching this as a URL separate from the text means it won't count against the character limit
+                            attachment_url: latestTrumpTweetSourceLink,
+                            // this is the tweet converted into mocking format
+                            status: latestTrumpTweetInMockingFormat
+                        }
+                        // send the new tweet
+                        client.post('statuses/update', sendTweetParams, function (error, tweet, response) {
+                            if (error) throw error;
+                        })
+                    }
                 }
-
-                // send the new tweet
-                client.post('statuses/update',
-                    sendTweetParams,
-                    function (error, tweet, response) {
-                        if (error) throw error;
-                        // console.log(tweet);  // Tweet body.
-                        // console.log(response);  // Raw response object.
-                    })
             }
-        }
-    }
-    else {
-        console.log(error);
-        //   console.log(tweets);
-        //   console.log(response);
+        });
     }
 });
