@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "node-twitterbot": "^0.2.2",
-    "twit": "^2.2.11"
+    "spongemock": "0.0.8",
+    "twit": "^2.2.11",
+    "twitter": "^1.7.1"
   }
 }
