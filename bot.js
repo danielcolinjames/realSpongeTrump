@@ -44,9 +44,14 @@ client.get('statuses/user_timeline', trumpParams, function (error, trumpTweets, 
                     // loop through the latest few @realSpongeTrump tweets to check them against the latest few @realDonaldTrump tweets
                     for (j = 0; j < spongeTweets.length; j++) {
                         // if the latest tweet by @realSpongeTrump is a quote tweet of @realDonaldTrump's latest tweet, set flag to true
-                        if (spongeTweets[j].quoted_status.id_str === lastTrumpTweetIdToCheck) {
-                            // set this tweet to be skipped
-                            alreadyMocked = true;
+                        try {
+                            if (spongeTweets[j].quoted_status.id_str === lastTrumpTweetIdToCheck) {
+                                // set this tweet to be skipped
+                                alreadyMocked = true;
+                            }
+                        }
+                        catch (err) {
+                            // console.log(err)
                         }
                     }
                     // skip anything that has already been mocked
