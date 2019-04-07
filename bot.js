@@ -12,7 +12,7 @@ var trumpParams = {
     screen_name: 'realDonaldTrump',
     // exclude retweets
     include_rts: false,
-    count: 5,
+    count: 10,
     // without this, it'll truncate tweets > 140 characters
     // if this isn't active, 'full_text' needs to be 'text'
     tweet_mode: 'extended'
@@ -21,7 +21,7 @@ var trumpParams = {
 var spongeParams = {
     screen_name: 'realSpongeTrump',
     include_rts: false,
-    count: 5,
+    count: 10,
     tweet_mode: 'extended'
 };
 
